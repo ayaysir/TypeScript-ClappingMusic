@@ -47,11 +47,11 @@ module.exports = {
             },
             {
                 test: /\.(mp3|ogg)$/,
-                loader: 'url-loader',
+                loader: 'file-loader',
                 options: {
                    name: "assets/media/[name].[ext]?[hash]"
                 }
-             },
+            },
         ]
     },
     plugins: [
