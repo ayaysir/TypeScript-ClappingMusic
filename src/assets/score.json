@@ -1,6 +1,8 @@
 {
-    "beats": 12,
-    "beats_type": 16,
+    "beats": 3,
+    "beats_type": 4,
+    "division_per_beat": 4,
+    "repeat_per_cell": 4,
     "clap_left": {
         "01": "vvv.vv.v.vv.",
         "02": "vvv.vv.v.vv.",
