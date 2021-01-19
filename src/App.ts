@@ -1,5 +1,6 @@
 import clapLeft from "./assets/clap-left.mp3"
 import clapRight from "./assets/clap-right.mp3"
+import silence from "./assets/silence.mp3"
 
 const NOTE = {
     width: 120,
@@ -11,16 +12,26 @@ const COORDS = {
     marginXOfNotes: 30
 }
 
-function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: evt.clientX - rect.left,
-      y: evt.clientY - rect.top
-    };
+
+const canvas: HTMLCanvasElement = document.createElement("canvas")
+const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!
+
+// function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent) {
+//     const rect = canvas.getBoundingClientRect();
+//     return {
+//       x: evt.clientX - rect.left,
+//       y: evt.clientY - rect.top
+//     };
+// }
+
+const showPressEffect = {
+    isPressLeft: false,
+    isPressRight: false
 }
 
-function makeBackgroundGradationOfNoteSide(context: CanvasRenderingContext2D, isLeft: boolean) {
+function makeBackgroundGradationOfNoteSide({isLeft}: {isLeft: boolean}) {
     
+    const context: CanvasRenderingContext2D = canvas.getContext("2d")!
     const gradient = context.createLinearGradient(0, 300, 0, 0);
     gradient.addColorStop(0, "rgba(255, 0, 0, 0.56)");
     gradient.addColorStop(0.5, "rgba(255, 137, 137, 0)");
@@ -31,16 +42,19 @@ function makeBackgroundGradationOfNoteSide(context: CanvasRenderingContext2D, is
 
 }
 
-function resetBackgroundGradationOfNoteSide(context: CanvasRenderingContext2D, isLeft: boolean) {
+
+
+function resetBackgroundGradationOfNoteSide(isLeft: boolean) {
     
+    const context: CanvasRenderingContext2D = canvas.getContext("2d")!
     context.fillStyle = "black"
     const startX = isLeft ? COORDS.startPosOfLeft : COORDS.startPosOfLeft + NOTE.width + COORDS.marginXOfNotes
     context.fillRect(startX, 0, NOTE.width, COORDS.startOfJudgeLineY + NOTE.height);
 
 }
 
-function renderNoteSide(canvas: HTMLCanvasElement) {
-    const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!
+function renderNoteSide() {
+    
     ctx.strokeStyle = "white"
 
     // left side
@@ -54,13 +68,12 @@ function renderNoteSide(canvas: HTMLCanvasElement) {
     ctx.strokeRect(rightSideStartX, COORDS.startOfJudgeLineY, NOTE.width, NOTE.height)
 }
 
-export default function App() {
-    const canvas: HTMLCanvasElement = document.createElement("canvas")
+function drawBaseScreen() {
     canvas.width = 1280
     canvas.height = 720
 
     // draw canvas
-    const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!
+    
 
     ctx.fillStyle = "black"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -69,35 +82,87 @@ export default function App() {
     ctx.fillText("Clapping", 30, 80)
     ctx.fillText("Music", 150, 150)
 
-    renderNoteSide(canvas)
+    renderNoteSide()
 
+}
+
+function drawNote({isLeft, y}: {isLeft: boolean, y: number}) {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
+    const startOfX = isLeft ? COORDS.startPosOfLeft : COORDS.startPosOfLeft + NOTE.width + COORDS.marginXOfNotes
+    ctx.fillRect(startOfX, y, NOTE.width, NOTE.height)
+}
+
+function playSilence() {
+    setInterval(() => {
+        const audio = new Audio(silence)
+        audio.play()
+    }, 1000)
+}
+
+
+function setEvents() {
     document.addEventListener("keypress", e => {
-        const keyMapping = {
-            "f": clapLeft,
-            "j": clapRight,
-        }
+
+        const audioLeft: HTMLAudioElement = new Audio(clapLeft)
+        const audioRight: HTMLAudioElement = new Audio(clapRight)
+        
         if(e.key === "f" || e.key === "j") {
-            const audio: HTMLAudioElement = new Audio(keyMapping[e.key])
+            const audio = e.key === "f" ? audioLeft : audioRight
             audio.play()
-            makeBackgroundGradationOfNoteSide(ctx, e.key === "f")
+            // makeBackgroundGradationOfNoteSide(e.key === "f")
+            e.key === "f" && (showPressEffect.isPressLeft = true)
+            e.key === "j" && (showPressEffect.isPressRight = true)
+            
+        } else if(e.key === " ") {
+            console.log("anti-lagging")
+            playSilence()
         }
     })
     document.addEventListener("keyup", e => {
         
         if(e.key === "f" || e.key === "j") {
-            resetBackgroundGradationOfNoteSide(ctx, e.key === "f")
-            renderNoteSide(canvas)
+            // resetBackgroundGradationOfNoteSide(ctx, e.key === "f")
+            // renderNoteSide(canvas)
+            e.key === "f" && (showPressEffect.isPressLeft = false)
+            e.key === "j" && (showPressEffect.isPressRight = false)
         }
     })
 
-
     document.addEventListener("mousemove", e => {
-        console.log(getMousePos(canvas, e))
+        // console.log(getMousePos(canvas, e))
     })
+}
 
-    // const img = document.createElement("img")
-    // img.src = clapHighLeft.default
-    // return img
+let ly = 0
+let ry = 0
+
+
+function loop() {
+    window.requestAnimationFrame(loop)
+    drawBaseScreen()
+
+    if(showPressEffect.isPressLeft) {
+        makeBackgroundGradationOfNoteSide({ isLeft: true })
+    }
+
+    if(showPressEffect.isPressRight) {
+        makeBackgroundGradationOfNoteSide({ isLeft: false })
+    }
+
+    drawNote({isLeft: true, y: ly += 10})
+    drawNote({isLeft: false, y: ry += 10})
+    
+    
+
+    ly > canvas.height && (ly = 0)
+    ry > canvas.height && (ry = 0)
+
+}
+
+export default function App() {
+    
+    loop()
+    setEvents()
 
     return canvas
 }
