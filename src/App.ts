@@ -1,9 +1,8 @@
 import clapLeft from "./assets/clap-left.mp3"
 import clapRight from "./assets/clap-right.mp3"
-import silence from "./assets/silence.mp3"
+import silence from "./assets/silence_3sec.mp3"
 
 import score from "./assets/score.json"
-import Score from "./App"
 
 const NOTE = {
     width: 120,
@@ -106,7 +105,7 @@ function playSilence() {
     setInterval(() => {
         const audio = new Audio(silence)
         audio.play()
-    }, 1000)
+    }, 2000)
 }
 
 
@@ -218,7 +217,7 @@ function loop(timestamp: any) {
         
 
         
-        for(let i = -52; i <= 0; i++) {
+        for(let i = -13 * 4 * 3; i <= 0; i++) {
             drawMeasureLine(score, my + 652.98 * 0.6818 * i + NOTE.height / 2)
         }
 
