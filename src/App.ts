@@ -2,6 +2,9 @@ import clapLeft from "./assets/clap-left.mp3"
 import clapRight from "./assets/clap-right.mp3"
 import silence from "./assets/silence.mp3"
 
+import score from "./assets/score.json"
+import Score from "./App"
+
 const NOTE = {
     width: 120,
     height: 20
@@ -12,8 +15,10 @@ const COORDS = {
     marginXOfNotes: 30
 }
 
-
 const canvas: HTMLCanvasElement = document.createElement("canvas")
+canvas.width = 1280
+canvas.height = 720
+
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!
 
 // function getMousePos(canvas: HTMLCanvasElement, evt: MouseEvent) {
@@ -27,6 +32,12 @@ const ctx: CanvasRenderingContext2D = canvas.getContext("2d")!
 const showPressEffect = {
     isPressLeft: false,
     isPressRight: false
+}
+
+const gameState: {isStart: boolean, startTimestamp: number, translatedScore: {left: number[], right: number[]}} = {
+    isStart: false,
+    startTimestamp: 0,
+    translatedScore: {left: [], right: []}
 }
 
 function makeBackgroundGradationOfNoteSide({isLeft}: {isLeft: boolean}) {
@@ -69,8 +80,6 @@ function renderNoteSide() {
 }
 
 function drawBaseScreen() {
-    canvas.width = 1280
-    canvas.height = 720
 
     // draw canvas
     
@@ -85,6 +94,7 @@ function drawBaseScreen() {
     renderNoteSide()
 
 }
+
 
 function drawNote({isLeft, y}: {isLeft: boolean, y: number}) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
@@ -114,8 +124,11 @@ function setEvents() {
             e.key === "j" && (showPressEffect.isPressRight = true)
             
         } else if(e.key === " ") {
-            console.log("anti-lagging")
+            // console.log("anti-lagging")
             playSilence()
+            gameState.isStart = true
+            gameState.startTimestamp = Date.now()
+            // console.log(gameState.startTimestamp)
         }
     })
     document.addEventListener("keyup", e => {
@@ -133,11 +146,61 @@ function setEvents() {
     })
 }
 
+// temporary variables
 let ly = 0
 let ry = 0
+let my = 0
+let currentMeasure = 1
 
+// length of 1 beat
+const lengthOfOneBeat = 60 / score.bpm
 
-function loop() {
+// draw measure line
+function drawMeasureLine(score: Score, y: number) {
+    const { bpm } = score
+    // console.log(bpm)
+    const endX = COORDS.startPosOfLeft + NOTE.width * 2 + COORDS.marginXOfNotes 
+    ctx.strokeStyle = "white"
+    ctx.beginPath()
+    ctx.moveTo(COORDS.startPosOfLeft, y)
+    ctx.lineTo(endX, y)
+    ctx.stroke()
+}
+
+function placeNotes(score: Score) {
+    const output: {left: number[], right: number[]} = {
+        left: [],
+        right: []
+    }
+
+    let i_left = 0
+    for(let measure of score.clap_left) {
+        for(let j = 0; j < 4; j++) {
+            for(let c = 0; c < measure.length; c++) {
+                if(measure[c] === "v") {
+                    output.left.push( 652.98 * 0.6818 / 4 * i_left )
+                } 
+                i_left--
+            }
+        }
+    }
+
+    let i_right = 0
+    for(let measure of score.clap_right) {
+        for(let j = 0; j < 4; j++) {
+            for(let c = 0; c < measure.length; c++) {
+                if(measure[c] === "v") {
+                    output.right.push( 652.98 * 0.6818 / 4 * i_right )
+                } 
+                i_right--
+            }
+        }
+    }
+
+    return output
+}
+
+function loop(timestamp: any) {
     window.requestAnimationFrame(loop)
     drawBaseScreen()
 
@@ -149,20 +212,46 @@ function loop() {
         makeBackgroundGradationOfNoteSide({ isLeft: false })
     }
 
-    drawNote({isLeft: true, y: ly += 10})
-    drawNote({isLeft: false, y: ry += 10})
-    
-    
+    if(gameState.isStart) {
+        
+        // 일단 속도는 60fps 를 가정
+        
 
-    ly > canvas.height && (ly = 0)
-    ry > canvas.height && (ry = 0)
+        
+        for(let i = -52; i <= 0; i++) {
+            drawMeasureLine(score, my + 652.98 * 0.6818 * i + NOTE.height / 2)
+        }
+
+        
+        // for(let i = -52 * 4; i <= 0; i++) {
+        //     drawNote({isLeft: true, y: ly + 652.98 * 0.6818 / 4 * i})
+        //     drawNote({isLeft: false, y: ly + 652.98 * 0.6818 / 4 * i})
+        // }
+
+        // 왼손
+        for(let el of gameState.translatedScore.left) {
+            drawNote({isLeft: true, y: ly + el})
+        }
+
+        // 오른손
+        for(let el of gameState.translatedScore.right) {
+            drawNote({isLeft: false, y: ry + el})
+        }
+
+
+        ly += 10.883
+        ry += 10.883
+        my += 10.883 // 1/60fps 당 몇 픽셀을 움직일 지 // 1초: 652.98 움직임
+    }
 
 }
 
 export default function App() {
     
-    loop()
+    gameState.translatedScore = placeNotes(score)
+    loop(0)
     setEvents()
+    console.log(placeNotes(score))
 
     return canvas
 }
